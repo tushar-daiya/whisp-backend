@@ -6,6 +6,7 @@ import { cors } from "hono/cors";
 import takesRouter from "./routes/takes.router";
 import uploadRouter from "./routes/upload.router";
 import { s3Client } from "./config/s3";
+import userRouter from "./routes/user.router";
 parseENV();
 const app = new Hono<{
   Variables: {
@@ -56,29 +57,17 @@ app.use("*", async (c, next) => {
 
 app.get("/", async (c) => {
   try {
-    // const files = await s3Client.list({
-    //   prefix:"recordings/"
-    // });
-    // console.log(files)
-    // await s3Client.write("my-file.txt", "Hello Bun!");
-    // return c.json(
-    //   {
-    //     message: "Hello from Hexafalls backend!",
-    //   },
-    //   200
-    // );
     return c.json({ message: "true" }, 200);
   } catch (error) {
-    console.error("Error accessing S3:", error);
     return c.json(
       {
-        error: "Failed to access S3",
+        error: "Internal server error",
       },
       500
     );
   }
 });
-
+app.route("/api/users", userRouter);;
 app.route("/api/meeting", meetingRouter);
 app.route("/api/takes", takesRouter);
 app.route("/api/upload", uploadRouter);
