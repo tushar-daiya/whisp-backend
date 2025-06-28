@@ -14,6 +14,11 @@ const app = new Hono<{
   };
 }>();
 
+app.all("*", (c, next) => {
+  console.log(`[${c.req.method}]: ${c.req.path}`);
+  return next();
+});
+
 app.use(
   "*",
   cors({
@@ -51,7 +56,7 @@ app.get("/", async (c) => {
     //   },
     //   200
     // );
-    return c.json({message:"true"},200)
+    return c.json({ message: "true" }, 200);
   } catch (error) {
     console.error("Error accessing S3:", error);
     return c.json(
