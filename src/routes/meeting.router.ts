@@ -35,6 +35,42 @@ meetingRouter.get("/", async (c) => {
   }
 });
 
+meetingRouter.get(
+  "/:meetingSlug",
+  zValidator(
+    "param",
+    z.object({
+      meetingSlug: z.string().length(6),
+    })
+  ),
+  async (c) => {
+    const session = c.get("session");
+    const user = c.get("user");
+    if (!session || !user) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    const meetingSlug = c.req.valid("param").meetingSlug;
+    try {
+      const meeting = await prisma.meeting.findUnique({
+        where: {
+          slug: meetingSlug,
+        },
+      });
+      if (!meeting) {
+        return c.json({ error: "Meeting not found" }, 404);
+      }
+      if (meeting.hostId !== user.id && meeting.guestId !== user.id) {
+        return c.json({ error: "Unauthorized" }, 403);
+      }
+      return c.json({ meeting }, 200);
+    } catch (error) {
+      console.error("Error fetching meeting by slug:", error);
+      return c.json({ error: "Failed to fetch meeting" }, 500);
+    }
+  }
+);
+
 //route to get all meetings the user is invited to
 meetingRouter.get("/invited", async (c) => {
   const session = c.get("session");
