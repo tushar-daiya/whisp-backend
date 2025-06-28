@@ -4,12 +4,28 @@ import { prisma } from "../lib/prisma";
 import { nanoid } from "nanoid";
 import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
+import { Prisma } from "../generated/prisma";
 const meetingRouter = new Hono<{
   Variables: {
     user: typeof auth.$Infer.Session.user | null;
     session: typeof auth.$Infer.Session.session | null;
   };
 }>();
+
+const meetingIncludeData = {
+  _count: {
+    select: {
+      takes: true,
+    },
+  },
+  host: {
+    select: {
+      name: true,
+      email: true,
+      image: true,
+    },
+  },
+} satisfies Prisma.MeetingInclude;
 
 //route to get all meetings for the user he is hosting
 meetingRouter.get("/", async (c) => {
@@ -23,7 +39,7 @@ meetingRouter.get("/", async (c) => {
       where: {
         hostId: user.id,
       },
-      take: 10,
+      include: meetingIncludeData,
       orderBy: {
         createdAt: "desc",
       },
@@ -34,7 +50,28 @@ meetingRouter.get("/", async (c) => {
     return c.json({ error: "Failed to fetch meetings" }, 500);
   }
 });
+//route to get all meetings the user is invited to
+meetingRouter.get("/invited", async (c) => {
+  const session = c.get("session");
+  const user = c.get("user");
+  if (!session || !user) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
 
+  try {
+    const meetings = await prisma.meeting.findMany({
+      where: {
+        guestId: user.id,
+      },
+      include: meetingIncludeData,
+    });
+    console.log("Invited meetings:", meetings);
+    return c.json({ meetings }, 200);
+  } catch (error) {
+    console.error("Error fetching invited meetings:", error);
+    return c.json({ error: "Failed to fetch invited meetings" }, 500);
+  }
+});
 meetingRouter.get(
   "/:meetingSlug",
   zValidator(
@@ -56,6 +93,14 @@ meetingRouter.get(
         where: {
           slug: meetingSlug,
         },
+        include: {
+          _count: {
+            select: { takes: true },
+          },
+          guest: true,
+          host: true,
+          takes: true,
+        },
       });
       if (!meeting) {
         return c.json({ error: "Meeting not found" }, 404);
@@ -70,27 +115,6 @@ meetingRouter.get(
     }
   }
 );
-
-//route to get all meetings the user is invited to
-meetingRouter.get("/invited", async (c) => {
-  const session = c.get("session");
-  const user = c.get("user");
-  if (!session || !user) {
-    return c.json({ error: "Unauthorized" }, 401);
-  }
-
-  try {
-    const meetings = await prisma.meeting.findMany({
-      where: {
-        guestId: user.id,
-      },
-    });
-    return c.json({ meetings }, 200);
-  } catch (error) {
-    console.error("Error fetching invited meetings:", error);
-    return c.json({ error: "Failed to fetch invited meetings" }, 500);
-  }
-});
 
 //route to create a new meeting
 meetingRouter.post("/create-meeting", async (c) => {
