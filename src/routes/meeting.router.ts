@@ -18,17 +18,21 @@ meetingRouter.get("/", async (c) => {
   if (!session || !user) {
     return c.json({ error: "Unauthorized" }, 401);
   }
-
-  const meetings = await prisma.meeting.findMany({
-    where: {
-      hostId: user.id,
-    },
-    take: 10,
-    orderBy: {
-      createdAt: "desc",
-    },
-  });
-  return c.json({ meetings }, 200);
+  try {
+    const meetings = await prisma.meeting.findMany({
+      where: {
+        hostId: user.id,
+      },
+      take: 10,
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+    return c.json({ meetings }, 200);
+  } catch (error) {
+    console.error("Error fetching meetings:", error);
+    return c.json({ error: "Failed to fetch meetings" }, 500);
+  }
 });
 
 //route to get all meetings the user is invited to
@@ -104,13 +108,13 @@ meetingRouter.patch(
       });
       return c.json({ meeting: updatedMeeting }, 200);
     } catch (error) {
-      console.error("Error updating meeting name:", error);
-      return c.json({ error: "Failed to update meeting name" }, 500);
+      console.error("Error updating meeting title:", error);
+      return c.json({ error: "Failed to update meeting title" }, 500);
     }
   }
 );
 
-//route to invite a guest to a meeting 
+//route to invite a guest to a meeting
 meetingRouter.post(
   "/invite/:meetingId",
   zValidator("param", z.object({ meetingId: z.string().uuid() })),
@@ -153,7 +157,7 @@ meetingRouter.post(
   }
 );
 
-//route to update recording status of a meeting 
+//route to update recording status of a meeting
 meetingRouter.patch(
   "/update-recording-status/:meetingId",
   zValidator("param", z.object({ meetingId: z.string().uuid() })),
@@ -167,14 +171,22 @@ meetingRouter.patch(
 
     const meetingId = c.req.valid("param").meetingId;
     const is_recording = c.req.valid("json").is_recording;
-    const meeting = await prisma.meeting.findUnique({
-      where: { id: meetingId },
-    });
-    if (!meeting) {
-      return c.json({ error: "Meeting not found" }, 404);
-    }
-    if (meeting.hostId !== user.id) {
-      return c.json({ error: "Unauthorized" }, 403);
+    try {
+      const meeting = await prisma.meeting.findUnique({
+        where: { id: meetingId },
+      });
+      if (!meeting) {
+        return c.json({ error: "Meeting not found" }, 404);
+      }
+      if (meeting.hostId !== user.id) {
+        return c.json({ error: "Unauthorized" }, 403);
+      }
+    } catch (error) {
+      console.error(
+        "Error fetching meeting for recording status update:",
+        error
+      );
+      return c.json({ error: "Failed to update status" }, 500);
     }
     try {
       const updatedMeeting = await prisma.meeting.update({
@@ -224,7 +236,6 @@ meetingRouter.get(
     }
   }
 );
-
 
 //route to delete a meeting only if the user is the host
 meetingRouter.delete(

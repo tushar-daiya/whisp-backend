@@ -27,15 +27,24 @@ app.on(["POST", "GET"], "/api/auth/*", (c) => {
 });
 
 app.use("*", async (c, next) => {
-  const session = await auth.api.getSession({ headers: c.req.raw.headers });
-  if (!session) {
-    c.set("user", null);
-    c.set("session", null);
+  try {
+    const session = await auth.api.getSession({ headers: c.req.raw.headers });
+    if (!session) {
+      c.set("user", null);
+      c.set("session", null);
+      return next();
+    }
+    c.set("user", session.user);
+    c.set("session", session.session);
     return next();
+  } catch (error) {
+    return c.json(
+      {
+        error: "Internal server error",
+      },
+      500
+    );
   }
-  c.set("user", session.user);
-  c.set("session", session.session);
-  return next();
 });
 
 app.get("/", async (c) => {
@@ -51,7 +60,7 @@ app.get("/", async (c) => {
     //   },
     //   200
     // );
-    return c.json({message:"true"},200)
+    return c.json({ message: "true" }, 200);
   } catch (error) {
     console.error("Error accessing S3:", error);
     return c.json(
