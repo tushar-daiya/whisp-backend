@@ -16,7 +16,7 @@ userRouter.get(
   zValidator(
     "query",
     z.object({
-      email: z.string(),
+      search: z.string(),
     })
   ),
   async (c) => {
@@ -25,13 +25,16 @@ userRouter.get(
     if (!session || !user) {
       return c.json({ error: "Unauthorized" }, 401);
     }
-    const { email } = c.req.valid("query");
+    const { search } = c.req.valid("query");
     try {
       const users = await prisma.user.findMany({
         where: {
-          email: {
-            contains: email,
-            mode: "insensitive", // Case-insensitive search
+          OR: [
+            { name: { contains: search, mode: "insensitive" } },
+            { email: { contains: search, mode: "insensitive" } },
+          ],
+          NOT: {
+            id: user.id,
           },
         },
       });
