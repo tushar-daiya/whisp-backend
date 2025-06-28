@@ -14,6 +14,11 @@ const app = new Hono<{
   };
 }>();
 
+app.all("*", (c, next) => {
+  console.log(`[${c.req.method}]: ${c.req.path}`);
+  return next();
+});
+
 app.use(
   "*",
   cors({
