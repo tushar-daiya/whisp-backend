@@ -8,6 +8,7 @@
     "@hono/zod-validator": "^0.7.0",
     "@prisma/client": "^6.10.1",
     "better-auth": "^1.2.10",
+    "bullmq": "^5.56.0",
     "hono": "^4.8.3",
     "nanoid": "^5.1.5",
     "prisma": "^6.10.1",

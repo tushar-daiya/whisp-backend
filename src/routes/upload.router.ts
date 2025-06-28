@@ -2,8 +2,9 @@ import { Hono } from "hono";
 import { auth } from "../lib/auth";
 import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
-import { uploadToS3 } from "../lib/uploadToS3";
 import { s3Client } from "../config/s3";
+import { prisma } from "../lib/prisma";
+import processingQueue from "../config/processing-queue";
 
 const uploadRouter = new Hono<{
   Variables: {
@@ -17,43 +18,68 @@ uploadRouter.post(
   zValidator(
     "param",
     z.object({
-      meetingId: z.string(),
-      takeId: z.string(),
-      userId: z.string(),
+      meetingId: z.string().length(6),
+      takeId: z.string().uuid(),
+      userId: z.string().uuid(),
       filename: z.string(),
     })
   ),
-  // zValidator(
-  //   "form",
-  //   z.object({
-  //     chunk: z.instanceof(Blob).refine((blob) => blob.size > 0, {
-  //       message: "Chunk must not be empty",
-  //     }),
-  //   })
-  // ),
   async (c) => {
-    const {meetingId, takeId, userId, filename} = c.req.valid("param");
-    const key = `recordings/${meetingId}/${takeId}/${userId}/${filename}`;
-    const presignedUrl = s3Client.presign(key,{
-      method: "PUT",
+    try {
+      const { meetingId, takeId, userId, filename } = c.req.valid("param");
+      const key = `recordings/${meetingId}/${takeId}/${userId}/${filename}`;
+      const presignedUrl = s3Client.presign(key, {
+        method: "PUT",
+      });
+      return c.json({ presignedUrl }, 200);
+    } catch (error) {
+      return c.json({ error: "Failed to generate presigned URL" }, 500);
+    }
+  }
+);
+
+uploadRouter.post(
+  "/upload-finished/:meetingId/:takeId",
+  zValidator(
+    "param",
+    z.object({
+      meetingId: z.string().length(6),
+      takeId: z.string().uuid(),
     })
-    return c.json({ presignedUrl }, 200);
-    // const session = c.get("session");
-    // const user = c.get("user");
-    // if (!session || !user) {
-    //   return c.json({ error: "Unauthorized" }, 401);
-    // }
-    // const { meetingId, takeId, userId, filename } = c.req.valid("param");
-    // const chunk = c.req.valid("form").chunk;
-    // try {
-    //   const key = `recordings/${meetingId}/${takeId}/${userId}/${filename}`;
-    //   await uploadToS3(chunk, key);
-    //   return c.json({ message: "Chunk uploaded successfully" }, 200);
-    // } catch (error) {
-    //   console.error("Error uploading chunk:", error);
-    //   return c.json({ error: "Failed to upload chunk" }, 500);
-    // }
-    return c.json({ message: "done" }, 200);
+  ),
+  async (c) => {
+    const session = c.get("session");
+    const user = c.get("user");
+    if (!session || !user) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+    const { meetingId, takeId } = c.req.valid("param");
+    try {
+      const meeting = await prisma.meeting.findUnique({
+        where: {
+          id: meetingId,
+        },
+        include: {
+          takes: {
+            where: {
+              id: takeId,
+            },
+          },
+        },
+      });
+      if (!meeting || meeting.takes.length === 0) {
+        return c.json({ error: "Meeting or take not found" }, 404);
+      }
+      await processingQueue.add("process-recording", {
+        meetingId: meeting.id,
+        takeId: takeId,
+        userId: user.id,
+      });
+      return c.json({ message: "Processing started" }, 200);
+    } catch (error) {
+      console.error("Error processing recording:", error);
+      return c.json({ error: "Failed to process recording" }, 500);
+    }
   }
 );
 
