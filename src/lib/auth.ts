@@ -26,8 +26,6 @@ export const auth = betterAuth({
     "http://localhost:3000",
     "https://compilo.xyz",
     "https://www.compilo.xyz",
-    'https://whisp-me.vercel.app',
-    'https://www.whisp-me.vercel.app'
   ],
 });
 
