@@ -13,8 +13,8 @@ const takesRouter = new Hono<{
 
 //creates a new take when recording starts
 takesRouter.post(
-  "/create/:meetingId",
-  zValidator("param", z.object({ meetingId: z.string().uuid() })),
+  "/create/:slug",
+  zValidator("param", z.object({ slug: z.string() })),
   async (c) => {
     const session = c.get("session");
     const user = c.get("user");
@@ -22,10 +22,10 @@ takesRouter.post(
       return c.json({ error: "Unauthorized" }, 401);
     }
 
-    const meetingId = c.req.valid("param").meetingId;
+    const slug = c.req.valid("param").slug;
     try {
       const meeting = await prisma.meeting.findUnique({
-        where: { id: meetingId },
+        where: { slug:slug },
       });
       if (!meeting) {
         return c.json({ error: "Meeting not found" }, 404);

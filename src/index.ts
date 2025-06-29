@@ -25,7 +25,7 @@ app.all("*", (c, next) => {
 app.use(
   "*",
   cors({
-    origin: Bun.env.FRONTEND_URL,
+    origin: [Bun.env.FRONTEND_URL,'http://localhost:3000'],
     credentials: true,
   })
 );

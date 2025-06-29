@@ -18,9 +18,9 @@ uploadRouter.post(
   zValidator(
     "param",
     z.object({
-      meetingId: z.string().length(6),
-      takeId: z.string().uuid(),
-      userId: z.string().uuid(),
+      meetingId: z.string(),
+      takeId: z.string(),
+      userId: z.string(),
       filename: z.string(),
     })
   ),
