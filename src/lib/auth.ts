@@ -11,20 +11,22 @@ export const auth = betterAuth({
       clientId: process.env.GOOGLE_CLIENT_ID as string,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
     },
-    github:{
+    github: {
       clientId: process.env.GITHUB_CLIENT_ID as string,
       clientSecret: process.env.GITHUB_SECRET_KEY as string,
-    }
+    },
   },
-  advanced:{
-    crossSubDomainCookies:{
+  advanced: {
+    crossSubDomainCookies: {
       enabled: true,
-      domain:".compilo.xyz"
-    }
+      domain: ".compilo.xyz",
+    },
   },
-  trustedOrigins:[
-    'http://localhost:3000',
-  ]
+  trustedOrigins: [
+    "http://localhost:3000",
+    "https://compilo.xyz",
+    "https://www.compilo.xyz",
+  ],
 });
 
 export type AuthType = {
