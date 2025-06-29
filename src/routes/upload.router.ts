@@ -4,7 +4,6 @@ import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
 import { s3Client } from "../config/s3";
 import { prisma } from "../lib/prisma";
-import processingQueue from "../config/processing-queue";
 
 const uploadRouter = new Hono<{
   Variables: {
@@ -70,11 +69,11 @@ uploadRouter.post(
       if (!meeting || meeting.takes.length === 0) {
         return c.json({ error: "Meeting or take not found" }, 404);
       }
-      await processingQueue.add("process-recording", {
-        meetingId: meeting.id,
-        takeId: takeId,
-        userId: user.id,
-      });
+      // await processingQueue.add("process-recording", {
+      //   meetingId: meeting.id,
+      //   takeId: takeId,
+      //   userId: user.id,
+      // });
       return c.json({ message: "Processing started" }, 200);
     } catch (error) {
       console.error("Error processing recording:", error);
