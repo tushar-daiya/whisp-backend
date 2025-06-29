@@ -16,6 +16,12 @@ export const auth = betterAuth({
       clientSecret: process.env.GITHUB_SECRET_KEY as string,
     }
   },
+  advanced:{
+    crossSubDomainCookies:{
+      enabled: true,
+      domain:".compilo.xyz"
+    }
+  },
   trustedOrigins:[
     'http://localhost:3000',
   ]
